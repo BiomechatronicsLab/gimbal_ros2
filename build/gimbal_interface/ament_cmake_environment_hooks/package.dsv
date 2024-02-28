@@ -1,0 +1,4 @@
+source;share/gimbal_interface/local_setup.bash
+source;share/gimbal_interface/local_setup.dsv
+source;share/gimbal_interface/local_setup.sh
+source;share/gimbal_interface/local_setup.zsh

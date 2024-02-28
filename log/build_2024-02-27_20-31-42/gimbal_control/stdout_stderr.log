@@ -1,0 +1,49 @@
+running egg_info
+writing ../../build/gimbal_control/gimbal_control.egg-info/PKG-INFO
+writing dependency_links to ../../build/gimbal_control/gimbal_control.egg-info/dependency_links.txt
+writing entry points to ../../build/gimbal_control/gimbal_control.egg-info/entry_points.txt
+writing requirements to ../../build/gimbal_control/gimbal_control.egg-info/requires.txt
+writing top-level names to ../../build/gimbal_control/gimbal_control.egg-info/top_level.txt
+ERROR setuptools_scm._file_finders.git listing git files failed - pretending there aren't any
+reading manifest file '../../build/gimbal_control/gimbal_control.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file '../../build/gimbal_control/gimbal_control.egg-info/SOURCES.txt'
+running build
+running build_py
+copying gimbal_control/__init__.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/build/lib/gimbal_control
+copying gimbal_control/gimbal_control_ros2_velocity.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/build/lib/gimbal_control
+copying gimbal_control/gimbal_info_publisher.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/build/lib/gimbal_control
+copying gimbal_control/gimbal_info_subscriber.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/build/lib/gimbal_control
+copying gimbal_control/gimbal_control_ros2_position.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/build/lib/gimbal_control
+running install
+/opt/homebrew/lib/python3.12/site-packages/setuptools/_distutils/cmd.py:66: SetuptoolsDeprecationWarning: setup.py install is deprecated.
+!!
+
+        ********************************************************************************
+        Please avoid running ``setup.py`` directly.
+        Instead, use pypa/build, pypa/installer or other
+        standards-based tools.
+
+        See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.
+        ********************************************************************************
+
+!!
+  self.initialize_options()
+running install_lib
+copying /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/build/lib/gimbal_control/gimbal_info_publisher.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/python3.10/site-packages/gimbal_control
+byte-compiling /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/python3.10/site-packages/gimbal_control/gimbal_info_publisher.py to gimbal_info_publisher.cpython-310.pyc
+running install_data
+copying resource/gimbal_control -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/share/ament_index/resource_index/packages
+copying package.xml -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/share/gimbal_control
+copying launch/gimbal_ctrl_vel_mode.launch.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/share/gimbal_control
+copying launch/gimbal_ctrl_pos_mode.launch.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/share/gimbal_control
+copying launch/python_parameter_launch.py -> /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/share/gimbal_control
+running install_egg_info
+removing '/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/python3.10/site-packages/gimbal_control-0.0.0-py3.10.egg-info' (and everything under it)
+Copying ../../build/gimbal_control/gimbal_control.egg-info to /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/python3.10/site-packages/gimbal_control-0.0.0-py3.10.egg-info
+running install_scripts
+Installing gimbal_ctrl_pos_mode script to /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/gimbal_control
+Installing gimbal_ctrl_vel_mode script to /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/gimbal_control
+Installing gimbal_pub script to /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/gimbal_control
+Installing gimbal_sub script to /Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/install/gimbal_control/lib/gimbal_control
+writing list of installed files to '/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_control/install.log'

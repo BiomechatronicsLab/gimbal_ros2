@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: gimbal_control
+Version: 0.0.0
+Summary: Package description: A ROS2 package to control camera gimbal
+Maintainer: huajingzhao
+Maintainer-email: huajing_zhao@berkeley.edu
+License: Apache-2.0
+License-File: LICENSE
+Requires-Dist: setuptools

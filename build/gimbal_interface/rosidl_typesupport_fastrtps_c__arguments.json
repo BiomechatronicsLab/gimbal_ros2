@@ -1,0 +1,19 @@
+{
+  "package_name": "gimbal_interface",
+  "output_dir": "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interface/rosidl_typesupport_fastrtps_c/gimbal_interface",
+  "template_dir": "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource",
+  "idl_tuples": [
+    "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interface/rosidl_adapter/gimbal_interface:msg/Gimbal.idl"
+  ],
+  "target_dependencies": [
+    "/Users/huajingzhao/ros2/humble/install/lib/rosidl_typesupport_fastrtps_c/rosidl_typesupport_fastrtps_c",
+    "/Users/huajingzhao/ros2/humble/install/lib/python3.10/site-packages/rosidl_typesupport_fastrtps_c/__init__.py",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource/idl__rosidl_typesupport_fastrtps_c.h.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource/idl__type_support_c.cpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource/msg__rosidl_typesupport_fastrtps_c.h.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource/msg__type_support_c.cpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource/srv__rosidl_typesupport_fastrtps_c.h.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_typesupport_fastrtps_c/resource/srv__type_support_c.cpp.em",
+    "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interface/rosidl_adapter/gimbal_interface/msg/Gimbal.idl"
+  ]
+}

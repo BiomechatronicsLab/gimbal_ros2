@@ -1,0 +1,26 @@
+{
+  "package_name": "gimbal_interface",
+  "output_dir": "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interface/rosidl_generator_cpp/gimbal_interface",
+  "template_dir": "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource",
+  "idl_tuples": [
+    "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interface/rosidl_adapter/gimbal_interface:msg/Gimbal.idl"
+  ],
+  "target_dependencies": [
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../../../lib/rosidl_generator_cpp/rosidl_generator_cpp",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../../../lib/python3.10/site-packages/rosidl_generator_cpp/__init__.py",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/action__builder.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/action__struct.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/action__traits.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/idl.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/idl__builder.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/idl__struct.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/idl__traits.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/msg__builder.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/msg__struct.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/msg__traits.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/srv__builder.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/srv__struct.hpp.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_cpp/cmake/../resource/srv__traits.hpp.em",
+    "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interface/rosidl_adapter/gimbal_interface/msg/Gimbal.idl"
+  ]
+}

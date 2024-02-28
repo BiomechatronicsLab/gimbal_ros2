@@ -1,0 +1,24 @@
+{
+  "package_name": "gimbal_interfaces",
+  "output_dir": "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interfaces/rosidl_generator_py/gimbal_interfaces",
+  "template_dir": "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource",
+  "idl_tuples": [
+    "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interfaces/rosidl_adapter/gimbal_interfaces:msg/Gimbal.idl"
+  ],
+  "target_dependencies": [
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../../../lib/rosidl_generator_py/rosidl_generator_py",
+    "/Users/huajingzhao/ros2/humble/install/lib/python3.10/site-packages/rosidl_generator_py/__init__.py",
+    "/Users/huajingzhao/ros2/humble/install/lib/python3.10/site-packages/rosidl_generator_py/generate_py_impl.py",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_action_pkg_typesupport_entry_point.c.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_action.py.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_idl_pkg_typesupport_entry_point.c.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_idl_support.c.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_idl.py.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_msg_pkg_typesupport_entry_point.c.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_msg_support.c.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_msg.py.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_srv_pkg_typesupport_entry_point.c.em",
+    "/Users/huajingzhao/ros2/humble/install/share/rosidl_generator_py/cmake/../resource/_srv.py.em",
+    "/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/build/gimbal_interfaces/rosidl_adapter/gimbal_interfaces/msg/Gimbal.idl"
+  ]
+}

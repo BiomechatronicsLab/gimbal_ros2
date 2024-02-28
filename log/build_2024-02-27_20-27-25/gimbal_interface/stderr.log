@@ -1,0 +1,10 @@
+CMake Error at /opt/homebrew/Cellar/cmake/3.28.3/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:48 (message):
+  Could not find compiler set in environment variable CXX:
+
+  /opt/homebrew/Cellar/g++-12.
+
+Call Stack (most recent call first):
+  CMakeLists.txt:2 (project)
+
+
+CMake Error: CMAKE_CXX_COMPILER not set, after EnableLanguage

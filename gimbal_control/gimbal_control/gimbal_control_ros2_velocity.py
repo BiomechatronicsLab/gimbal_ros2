@@ -1,6 +1,5 @@
 from dynio import * # https://pypi.org/project/dynamixel-controller/
 import time
-# import rospy
 import csv
 import numpy as np
 
@@ -11,7 +10,7 @@ from rclpy.node import Node
 # from std_msgs.msg import String
 from gimbal_interface.msg import Gimbal                         
 
-# note: NEED to run gimbal_pub at another terminal to receive desired motor positions
+# note: NEED to run gimbal_pub at another terminal to receive sample motor positions
 
 
 class GimbalSubscriber(Node):
@@ -27,8 +26,6 @@ class GimbalSubscriber(Node):
         self.gimbal_tilt = dxl_io.new_mx64(dxl_id=1, protocol=2)
 
         self.ts = 0
-
-        # self.setup_gimbal
 
         self.gimbal_pan.torque_disable()         # you have to disable torque before you change modes
         self.gimbal_pan.set_velocity_mode()
@@ -49,22 +46,6 @@ class GimbalSubscriber(Node):
         self.subscription = self.create_subscription(Gimbal, 'gimbal_topic', self.listener_callback, 10)
         self.subscription
 
-    # def setup_gimbal(self):
-    #     self.gimbal_pan.torque_disable()         # you have to disable torque before you change modes
-    #     self.gimbal_pan.set_velocity_mode()
-    #     self.gimbal_pan.torque_enable() 
-
-    #     self.gimbal_tilt.torque_disable()        # you have to disable torque before you change modes
-    #     self.gimbal_tilt.set_velocity_mode()
-    #     self.gimbal_tilt.torque_enable() 
-
-    #     self.pos_pan_0 = self.gimbal_pan.get_position()
-    #     self.pos_tilt_0 = self.gimbal_tilt.get_position()
-
-    #     self.msg_pan_0 = None
-    #     self.msg_tilt_0 = None
-    #     self.pos_pan_prev = None
-    #     self.pos_tilt_prev = None
 
     def listener_callback(self, msg):
         self.get_logger().info('Subscription: msg_pan = %f, msg_tilt = %f' %(msg.pan, msg.tilt))

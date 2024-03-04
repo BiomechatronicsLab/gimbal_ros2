@@ -14,96 +14,111 @@ from gimbal_interface.msg import Gimbal
 # note: NEED to run gimbal_pub at another terminal to receive desired motor positions
 
 
-class MinimalSubscriber(Node):
+class GimbalSubscriber(Node):
     def __init__(self):
-        super().__init__('minimal_subscriber')
-        self.subscription = self.create_subscription(
-            Gimbal,                                              
-            'topic',
-            self.listener_callback,
-            10)
-        self.subscription
+        
+        super().__init__('gimbal_subscriber')
+
+        # initialize dynamixel
+        self.PORTNAME = self.declare_parameter('usb_port').value
+        dxl_io = dxl.DynamixelIO(device_name=self.PORTNAME, baud_rate=57600) # your port for U2D2 or other serial device
+
+        self.gimbal_pan = dxl_io.new_mx64(dxl_id=0, protocol=2)   
+        self.gimbal_tilt = dxl_io.new_mx64(dxl_id=1, protocol=2)
+
         self.ts = 0
 
+        # self.setup_gimbal
+
+        self.gimbal_pan.torque_disable()         # you have to disable torque before you change modes
+        self.gimbal_pan.set_velocity_mode()
+        self.gimbal_pan.torque_enable() 
+
+        self.gimbal_tilt.torque_disable()        # you have to disable torque before you change modes
+        self.gimbal_tilt.set_velocity_mode()
+        self.gimbal_tilt.torque_enable() 
+
+        self.pos_pan_0 = self.gimbal_pan.get_position()
+        self.pos_tilt_0 = self.gimbal_tilt.get_position()
+
+        self.msg_pan_0 = None
+        self.msg_tilt_0 = None
+        self.pos_pan_prev = None
+        self.pos_tilt_prev = None
+
+        self.subscription = self.create_subscription(Gimbal, 'gimbal_topic', self.listener_callback, 10)
+        self.subscription
+
+    # def setup_gimbal(self):
+    #     self.gimbal_pan.torque_disable()         # you have to disable torque before you change modes
+    #     self.gimbal_pan.set_velocity_mode()
+    #     self.gimbal_pan.torque_enable() 
+
+    #     self.gimbal_tilt.torque_disable()        # you have to disable torque before you change modes
+    #     self.gimbal_tilt.set_velocity_mode()
+    #     self.gimbal_tilt.torque_enable() 
+
+    #     self.pos_pan_0 = self.gimbal_pan.get_position()
+    #     self.pos_tilt_0 = self.gimbal_tilt.get_position()
+
+    #     self.msg_pan_0 = None
+    #     self.msg_tilt_0 = None
+    #     self.pos_pan_prev = None
+    #     self.pos_tilt_prev = None
+
     def listener_callback(self, msg):
-        self.get_logger().info('Subscription: gimbal_pan = %f, gimbal_tilt = %f' %(msg.pan, msg.tilt))
+        self.get_logger().info('Subscription: msg_pan = %f, msg_tilt = %f' %(msg.pan, msg.tilt))
 
-        global msg_pan_0, msg_tilt_0, position_pan_prev, position_tilt_prev
         if self.ts == 0:
-            msg_pan_0 = msg.pan
-            msg_tilt_0 = msg.tilt
+            self.msg_pan_0 = msg.pan
+            self.msg_tilt_0 = msg.tilt
 
-            gimbal_pan.set_velocity(0)
-            gimbal_tilt.set_velocity(0)
+            self.gimbal_pan.set_velocity(0)
+            self.gimbal_tilt.set_velocity(0)
 
-            position_pan = gimbal_pan_0
-            position_tilt = gimbal_tilt_0
-
-            position_pan_prev = gimbal_pan_0
-            position_tilt_prev = gimbal_tilt_0
+            self.pos_pan = self.pos_pan_0
+            self.pos_tilt = self.pos_tilt_0
+            self.pos_pan_prev = self.pos_pan_0
+            self.pos_tilt_prev = self.pos_tilt_0
 
         else:
-            position_pan = gimbal_pan_0 + msg.pan - msg_pan_0
-            position_tilt = gimbal_tilt_0 +  msg.tilt - msg_tilt_0
+            self.pos_pan = msg.pan              # + self.pos_pan_0  - self.msg_pan_0      # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
+            self.pos_tilt = msg.tilt            # + self.pos_tilt_0 - self.msg_tilt_0     # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
 
-            velocity_pan = position_pan - position_pan_prev
-            velocity_tilt = position_tilt - position_tilt_prev
+            self.velocity_pan = self.pos_pan - self.pos_pan_prev
+            self.velocity_tilt = self.pos_tilt - self.pos_tilt_prev
 
-            gimbal_pan.set_velocity(int(velocity_pan))
-            gimbal_tilt.set_velocity(int(velocity_tilt))
+            self.gimbal_pan.set_velocity(int(self.velocity_pan))
+            self.gimbal_tilt.set_velocity(int(self.velocity_tilt))
 
-            position_pan_prev = position_pan
-            position_tilt_prev = position_tilt
+            self.pos_pan_prev = self.pos_pan
+            self.pos_tilt_prev = self.pos_tilt
 
-            print("output_pan = %f, output_tilt = %f, set velocity_pan = %f, set velocity_tilt = %f" %(gimbal_pan.get_position(), gimbal_tilt.get_position(), velocity_pan, velocity_tilt))
+            print("output_pan = %f, output_tilt = %f, set velocity_pan = %f, set velocity_tilt = %f" %(self.gimbal_pan.get_position(), self.gimbal_tilt.get_position(), self.velocity_pan, self.velocity_tilt))
         self.ts += 1
+
+    def __del__(self):
+        
+        # turn off the motors
+        self.gimbal_pan.set_velocity(0)
+        self.gimbal_pan.torque_disable()
+
+        self.gimbal_tilt.set_velocity(0)
+        self.gimbal_tilt.torque_disable()
 
 def main(args=None):
     rclpy.init(args=args)
 
-    global gimbal_pan, gimbal_tilt, gimbal_pan_0, gimbal_tilt_0
-
-    # initialize dynamixel
-    dxl_io = dxl.DynamixelIO(device_name='/dev/tty.usbserial-FT6Z5UZP', baud_rate=57600) # your port for U2D2 or other serial device
-
-    gimbal_pan = dxl_io.new_mx64(dxl_id=0, protocol=2)   
-    gimbal_tilt = dxl_io.new_mx64(dxl_id=1, protocol=2)
-
-    gimbal_pan.torque_disable()         # you have to disable torque before you change modes
-    # gimbal_pan.set_position_mode()
-    gimbal_pan.set_velocity_mode()
-    gimbal_pan.torque_enable() 
-
-    gimbal_tilt.torque_disable()        # you have to disable torque before you change modes
-    gimbal_tilt.set_velocity_mode()
-    gimbal_tilt.torque_enable() 
-
-    gimbal_pan_0 = gimbal_pan.get_position()
-    gimbal_tilt_0 = gimbal_tilt.get_position()
-
     # run ros2 callback with subscriber to desired dynamxiel positions and update commands to physical motors 
-    minimal_subscriber = MinimalSubscriber()
-    rclpy.spin(minimal_subscriber)
+    gimbal_subscriber = GimbalSubscriber()
+    rclpy.spin(gimbal_subscriber)
 
-    # Destroy the node explicitly  (optional - otherwise it will be done automatically when the garbage collector destroys the node object)
-    minimal_subscriber.destroy_node()
+    # destroy the node explicitly  (optional - otherwise it will be done automatically when the garbage collector destroys the node object)
+    gimbal_subscriber.destroy_node()
     rclpy.shutdown()
-
-    # turn off the 
-    gimbal_pan.set_velocity(0)
-    gimbal_pan.torque_disable()
-
-    gimbal_tilt.set_velocity(0)
-    gimbal_tilt.torque_disable()
-
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
 
 
 

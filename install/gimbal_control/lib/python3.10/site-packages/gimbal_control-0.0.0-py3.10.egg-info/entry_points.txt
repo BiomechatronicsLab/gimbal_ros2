@@ -1,5 +1,0 @@
-[console_scripts]
-gimbal_ctrl_pos_mode = gimbal_control.gimbal_control_ros2_position:main
-gimbal_ctrl_vel_mode = gimbal_control.gimbal_control_ros2_velocity:main
-gimbal_pub = gimbal_control.gimbal_info_publisher:main
-gimbal_sub = gimbal_control.gimbal_info_subscriber:main

@@ -1,8 +1,0 @@
-setup.py
-gimbal_interface/__init__.py
-gimbal_interface.egg-info/PKG-INFO
-gimbal_interface.egg-info/SOURCES.txt
-gimbal_interface.egg-info/dependency_links.txt
-gimbal_interface.egg-info/top_level.txt
-gimbal_interface/msg/__init__.py
-gimbal_interface/msg/_gimbal.py

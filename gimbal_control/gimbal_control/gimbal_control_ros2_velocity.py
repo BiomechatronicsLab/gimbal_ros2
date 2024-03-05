@@ -5,12 +5,9 @@ import numpy as np
 
 import rclpy
 from rclpy.node import Node
-
-
-# from std_msgs.msg import String
 from gimbal_interface.msg import Gimbal                         
 
-# note: NEED to run gimbal_pub at another terminal to receive sample motor positions
+# note: modify gimbal_topic to receive pan and tilt from headset, otherwise receive sample motor waypoints by uncommenting gimbal_pub node in launch files 
 
 
 class GimbalSubscriber(Node):

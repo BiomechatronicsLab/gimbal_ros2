@@ -3,15 +3,15 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-         Node(
-            package='gimbal_control',
-            executable='gimbal_pub',
-            name='gimbal_pub',
-            parameters=[
-            # {"rosbag_cmd_path": '/home/bml/ONR_ws/src/hardware/gimbal_ros2/gimbal_control/gimbal_control/'},
-            {"rosbag_cmd_path": '/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/src/gimbal_control/gimbal_control/'},
-            ]
-        ),
+        #  Node(
+        #     package='gimbal_control',
+        #     executable='gimbal_pub',
+        #     name='gimbal_pub',
+        #     parameters=[
+        #     # {"rosbag_cmd_path": '/home/bml/ONR_ws/src/hardware/gimbal_ros2/gimbal_control/gimbal_control/'},
+        #     {"rosbag_cmd_path": '/Users/huajingzhao/Desktop/UCLA/projects/neureality/gimbal_ws/src/gimbal_control/gimbal_control/'},
+        #     ]
+        # ),
 
         Node(
             package='gimbal_control',

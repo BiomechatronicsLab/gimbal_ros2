@@ -16,7 +16,7 @@ class GimbalSubscriber(Node):
         super().__init__('gimbal_subscriber')
 
         # initialize dynamixel
-        self.PORTNAME = self.declare_parameter('usb_port').value
+        self.PORTNAME = self.declare_parameter('usb_port', rclpy.Parameter.Type.STRING).value
         dxl_io = dxl.DynamixelIO(device_name=self.PORTNAME, baud_rate=57600) # your port for U2D2 or other serial device
 
         self.gimbal_pan = dxl_io.new_mx64(dxl_id=0, protocol=2)   
@@ -40,16 +40,16 @@ class GimbalSubscriber(Node):
         self.pos_pan_prev = None
         self.pos_tilt_prev = None
 
-        self.subscription = self.create_subscription(Gimbal, 'gimbal_topic', self.listener_callback, 10)
+        self.subscription = self.create_subscription(Gimbal, '/gimbal_topic', self.listener_callback, 10)
         self.subscription
 
 
     def listener_callback(self, msg):
         self.get_logger().info('Subscription: msg_pan = %f, msg_tilt = %f' %(msg.pan, msg.tilt))
-
+	
         if self.ts == 0:
-            self.msg_pan_0 = msg.pan
-            self.msg_tilt_0 = msg.tilt
+            self.msg_pan_0 = msg.pan / (2*np.pi)*4096
+            self.msg_tilt_0 = msg.tilt / (2*np.pi)*4096
 
             self.gimbal_pan.set_velocity(0)
             self.gimbal_tilt.set_velocity(0)
@@ -60,8 +60,8 @@ class GimbalSubscriber(Node):
             self.pos_tilt_prev = self.pos_tilt_0
 
         else:
-            self.pos_pan = msg.pan              # + self.pos_pan_0  - self.msg_pan_0      # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
-            self.pos_tilt = msg.tilt            # + self.pos_tilt_0 - self.msg_tilt_0     # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
+            self.pos_pan = msg.pan / (2*np.pi)*4096             # + self.pos_pan_0  - self.msg_pan_0 / (2*np.pi)*4096    # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
+            self.pos_tilt = msg.tilt / (2*np.pi)*4096            # + self.pos_tilt_0 - self.msg_tilt_0 / (2*np.pi)*4096   # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
 
             self.velocity_pan = self.pos_pan - self.pos_pan_prev
             self.velocity_tilt = self.pos_tilt - self.pos_tilt_prev
@@ -71,8 +71,7 @@ class GimbalSubscriber(Node):
 
             self.pos_pan_prev = self.pos_pan
             self.pos_tilt_prev = self.pos_tilt
-
-            print("output_pan = %f, output_tilt = %f, set velocity_pan = %f, set velocity_tilt = %f" %(self.gimbal_pan.get_position(), self.gimbal_tilt.get_position(), self.velocity_pan, self.velocity_tilt))
+            self.get_logger().info("output_pan = %f, output_tilt = %f, set velocity_pan = %f, set velocity_tilt = %f" %(self.gimbal_pan.get_position(), self.gimbal_tilt.get_position(), self.velocity_pan, self.velocity_tilt))
         self.ts += 1
 
     def __del__(self):

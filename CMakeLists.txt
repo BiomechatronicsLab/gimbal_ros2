@@ -68,16 +68,26 @@ install(
 # Install udev rule
 if (NOT EXISTS /etc/udev/rules.d/89-dynamixel.rules)
     message("\n\nPlease enter computer password: ")
-    execute_process(
-        COMMAND sudo chmod 777 /etc/udev/rules.d
+    install(
+        CODE
+        "execute_process( \
+            COMMAND_ECHO STDOUT \
+            COMMAND_ERROR_IS_FATAL ANY \
+            COMMAND sudo chmod 777 /etc/udev/rules.d \
+        )"
     )
     install(
         FILES ${CMAKE_SOURCE_DIR}/89-dynamixel.rules
         DESTINATION /etc/udev/rules.d/
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     )
-    execute_process(
-        COMMAND sudo chmod 755 /etc/udev/rules.d
+    install(
+        CODE
+        "execute_process( \
+            COMMAND_ECHO STDOUT \
+            COMMAND_ERROR_IS_FATAL ANY \
+            COMMAND sudo chmod 755 /etc/udev/rules.d \
+        )"
     )
 endif()
 

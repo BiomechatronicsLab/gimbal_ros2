@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-import sys
-
 from typing import Callable, Any, Type
 
 from functools import partial
 
 from dynio import dynamixel_controller as dxl
 import time
-import csv
 import numpy as np
 import math
 
@@ -15,11 +12,10 @@ import rclpy
 from rclpy.node import Node
 import rclpy.logging
 
+from configuration.configuration import Configuration
 from gimbal_ros2.msg import Gimbal
+from std_msgs.msg import Bool
 from serial.serialutil import SerialException
-
-
-# note: modify gimbal_topic to receive pan and tilt from headset, otherwise receive sample motor waypoints by uncommenting gimbal_pub node in launch files
 
 
 def map_range(
@@ -79,6 +75,13 @@ def exponential_back_off(
         attempt_counter += 1
 
 
+DYN_ENCODER_TICKS_PER_RAD = 4096 / 2 / math.pi
+DYN_MIN_POSITION_TICKS = 0
+DYN_MAX_POSITION_TICKS = 4095
+DYN_MIN_P_GAIN = 0
+DYN_MAX_P_GAIN = 16_383
+
+
 class GimbalSubscriber(Node):
     """
     A ROS2 subscriber that listens to desired Dynamxiel positions and
@@ -87,6 +90,35 @@ class GimbalSubscriber(Node):
 
     def __init__(self):
         super().__init__("gimbal_subscriber")
+
+        config = Configuration()["gimbal"]
+        print(config)
+
+        self.pan_prop_gain = config["pan_prop_gain"]
+        self.tilt_prop_gain = config["tilt_prop_gain"]
+
+        self.pan_joint_min_limit_ticks = round(
+            DYN_ENCODER_TICKS_PER_RAD * math.radians(config["pan_joint_min_limit_deg"])
+        )
+        self.pan_joint_max_limit_ticks = round(
+            DYN_ENCODER_TICKS_PER_RAD * math.radians(config["pan_joint_max_limit_deg"])
+        )
+
+        self.tilt_joint_min_limit_ticks = round(
+            DYN_ENCODER_TICKS_PER_RAD * math.radians(config["tilt_joint_min_limit_deg"])
+        )
+        self.tilt_joint_max_limit_ticks = round(
+            DYN_ENCODER_TICKS_PER_RAD * math.radians(config["tilt_joint_max_limit_deg"])
+        )
+
+        self.pan_joint_home_pos_deg = config["pan_joint_home_pos_deg"]
+        self.tilt_joint_home_pos_deg = config["tilt_joint_home_pos_deg"]
+
+        max_pan_ang_vel_rpm = config["max_pan_ang_vel_rpm"]
+        max_tilt_ang_vel_rpm = config["max_tilt_ang_vel_rpm"]
+
+        self.max_pan_ang_vel_rad_per_s = max_pan_ang_vel_rpm * math.tau / 60
+        self.max_tilt_ang_vel_rad_per_s = max_tilt_ang_vel_rpm * math.tau / 60
 
         # Initialize Dynamixel USB serial port connection
         self.port_name = self.declare_parameter(
@@ -107,78 +139,182 @@ class GimbalSubscriber(Node):
                 try_dynamixel_connect, exceptions=(SerialException,)
             )
 
-        self.gimbal_pan = dxl_io.new_mx64(dxl_id=0, protocol=2)
-        self.gimbal_tilt = dxl_io.new_mx64(dxl_id=1, protocol=2)
-        self.is_first_time_step = True
+        self.gimbal_pan_motor = dxl_io.new_mx64(dxl_id=0, protocol=2)
+        self.gimbal_tilt_motor = dxl_io.new_mx64(dxl_id=1, protocol=2)
+        self.gimbal_pan_motor.torque_disable()
+        self.gimbal_tilt_motor.torque_disable()
 
-        # Torque must be disabled to change modes
-        self.gimbal_pan.torque_disable()
-        # Start velocity control mode for pan dynamixel
-        self.gimbal_pan.set_velocity_mode()
-        self.gimbal_pan.torque_enable()
-
-        # Torque must be disabled to change modes
-        self.gimbal_tilt.torque_disable()
-        # Start velocity control mode for tilt dynamixel
-        self.gimbal_tilt.set_velocity_mode()
-        self.gimbal_tilt.torque_enable()
-
-        self.pos_pan_zero = self.gimbal_pan.get_position()
-        self.pos_tilt_zero = self.gimbal_tilt.get_position()
-
-        self.msg_pan_zero = None
-        self.msg_tilt_zero = None
-        self.pos_pan_prev = None
-        self.pos_tilt_prev = None
-
-        self.subscription = self.create_subscription(
-            Gimbal, "/gimbal_topic", self.listener_callback, 10
+        # Set pan motor joint limits (must be in range [0, 4095])
+        self.gimbal_pan_motor.write_control_table(
+            "Min_Position_Limit",
+            max(
+                DYN_MIN_P_GAIN,
+                min(self.pan_joint_min_limit_ticks, DYN_MAX_POSITION_TICKS),
+            ),
+        )
+        self.gimbal_pan_motor.write_control_table(
+            "Max_Position_Limit",
+            max(
+                DYN_MIN_P_GAIN,
+                min(self.pan_joint_max_limit_ticks, DYN_MAX_POSITION_TICKS),
+            ),
         )
 
-    def listener_callback(self, msg):
+        # Set tilt motor joint limits  (must be in range [0, 4095])
+        self.gimbal_tilt_motor.write_control_table(
+            "Min_Position_Limit",
+            max(
+                DYN_MIN_P_GAIN,
+                min(self.tilt_joint_min_limit_ticks, DYN_MAX_POSITION_TICKS),
+            ),
+        )
+        self.gimbal_tilt_motor.write_control_table(
+            "Max_Position_Limit",
+            max(
+                DYN_MIN_P_GAIN,
+                min(self.tilt_joint_max_limit_ticks, DYN_MAX_POSITION_TICKS),
+            ),
+        )
+
+        # Set pan/tilt motor control velocity P gain (must be in range [0, 16_383])
+        self.gimbal_pan_motor.write_control_table(
+            "Velocity_P_Gain",
+            round(max(DYN_MIN_P_GAIN, min(self.pan_prop_gain, DYN_MAX_P_GAIN))),
+        )
+        self.gimbal_tilt_motor.write_control_table(
+            "Velocity_P_Gain",
+            round(max(DYN_MIN_P_GAIN, min(self.tilt_prop_gain, DYN_MAX_P_GAIN))),
+        )
+
+        self.is_first_time_step = True
+        self.is_active = False
+
+        self.user_pan_ang_curr_rad = None
+        self.user_tilt_ang_curr_rad = None
+        self.user_pan_ang_zero_rad = None
+        self.user_tilt_ang_zero_rad = None
+        self.motor_pan_ang_zero_rad = None
+        self.motor_tilt_ang_zero_rad = None
+
+        self.activate()
+
+        self.subscription = self.create_subscription(
+            Gimbal, "/gimbal_topic", self.listener_callback, 1
+        )
+
+        self.subscription = self.create_subscription(
+            Bool, "/gimbal/should_be_active", self.activation_state_cb, 1
+        )
+
+        motor_control_freq_Hz = max(1, config["motor_control_freq_Hz"])
+        self.timer_period_s = 1 / motor_control_freq_Hz
+        self.timer = self.create_timer(
+            timer_period_sec=self.timer_period_s, callback=self.motor_control_cb
+        )
+
+    def motor_control_cb(self):
+        if not self.is_active:
+            # Controller should not be active
+            return
+
+        if self.user_pan_ang_zero_rad is None or self.user_tilt_ang_zero_rad is None:
+            # First command not received yet
+            return
+
+        goal_pan_motor_position_rad = self.motor_pan_ang_zero_rad + (
+            self.user_pan_ang_curr_rad - self.user_pan_ang_zero_rad
+        )
+        curr_pan_motor_position_rad = math.radians(self.gimbal_pan_motor.get_angle())
+        user_pan_ang_vel_ticks_per_s = DYN_ENCODER_TICKS_PER_RAD * min(
+            (goal_pan_motor_position_rad - curr_pan_motor_position_rad)
+            / self.timer_period_s,
+            self.max_pan_ang_vel_rad_per_s,
+        )
+
+        goal_tilt_motor_position_rad = self.motor_tilt_ang_zero_rad + (
+            self.user_tilt_ang_curr_rad - self.user_tilt_ang_zero_rad
+        )
+        curr_tilt_motor_position_rad = math.radians(self.gimbal_tilt_motor.get_angle())
+        user_tilt_ang_vel_ticks_per_s = DYN_ENCODER_TICKS_PER_RAD * min(
+            (goal_tilt_motor_position_rad - curr_tilt_motor_position_rad)
+            / self.timer_period_s,
+            self.max_tilt_ang_vel_rad_per_s,
+        )
+
+        # TODO: Consider integral and/or derivative gains
+        self.gimbal_pan_motor.set_velocity(round(user_pan_ang_vel_ticks_per_s))
+
+        # TODO: Consider integral and/or derivative gains
+        self.gimbal_tilt_motor.set_velocity(round(user_tilt_ang_vel_ticks_per_s))
+
+    def listener_callback(self, msg: Gimbal):
+        self.user_pan_ang_curr_rad = float(msg.pan)
+        self.user_tilt_ang_curr_rad = float(msg.tilt)
+
         if self.is_first_time_step:
-            self.msg_pan_zero = msg.pan / (2 * np.pi) * 4096
-            self.msg_tilt_zero = msg.tilt / (2 * np.pi) * 4096
-
-            self.gimbal_pan.set_velocity(0)
-            self.gimbal_tilt.set_velocity(0)
-
-            self.pos_pan = self.pos_pan_zero
-            self.pos_tilt = self.pos_tilt_zero
-            self.pos_pan_prev = self.pos_pan_zero
-            self.pos_tilt_prev = self.pos_tilt_zero
+            self.user_pan_ang_zero_rad = float(self.user_pan_ang_curr_rad)
+            self.user_tilt_ang_zero_rad = float(self.user_tilt_ang_curr_rad)
 
             self.is_first_time_step = False
-        else:
-            self.pos_pan = (
-                msg.pan / (2 * np.pi) * 4096
-            )  # + self.pos_pan_0  - self.msg_pan_0 / (2*np.pi)*4096    # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
-            self.pos_tilt = (
-                msg.tilt / (2 * np.pi) * 4096
-            )  # + self.pos_tilt_0 - self.msg_tilt_0 / (2*np.pi)*4096   # uncomment if want to track relative movements of the headset, otherwise will track the absolute values of headset angles
 
-            self.velocity_pan = self.pos_pan - self.pos_pan_prev
-            self.velocity_tilt = self.pos_tilt - self.pos_tilt_prev
+    def activation_state_cb(self, msg: Bool):
+        if self.is_active and not msg.data:
+            self.deactivate()
+        elif not self.is_active and msg.data:
+            self.activate()
 
-            self.gimbal_pan.set_velocity(int(self.velocity_pan))
-            self.gimbal_tilt.set_velocity(int(self.velocity_tilt))
+    def go_to_home(self):
+        if self.is_active:
+            self.gimbal_pan_motor.torque_disable()
+            self.gimbal_pan_motor.set_position_mode()
+            self.gimbal_pan_motor.torque_enable()
+            self.gimbal_pan_motor.set_angle(self.pan_joint_home_pos_deg)
 
-            self.pos_pan_prev = self.pos_pan
-            self.pos_tilt_prev = self.pos_tilt
+            self.gimbal_tilt_motor.torque_disable()
+            self.gimbal_tilt_motor.set_position_mode()
+            self.gimbal_tilt_motor.torque_enable()
+            self.gimbal_tilt_motor.set_angle(self.tilt_joint_home_pos_deg)
 
-    def cleanup(self):
-        # TODO: Go to gimbal "home" position
+    def deactivate(self):
+        if self.is_active:
+            self.go_to_home()
 
-        # Turn off the motors
-        self.gimbal_pan.set_velocity(0)
-        self.gimbal_pan.torque_disable()
+            # Turn off the motors
+            self.gimbal_pan_motor.torque_disable()
+            self.gimbal_tilt_motor.torque_disable()
 
-        self.gimbal_tilt.set_velocity(0)
-        self.gimbal_tilt.torque_disable()
+            self.is_active = False
+
+    def activate(self):
+        if not self.is_active:
+            # Set motor zero to home position
+            self.motor_pan_ang_zero_rad = math.radians(
+                self.gimbal_pan_motor.get_angle()
+            )
+            self.motor_tilt_ang_zero_rad = math.radians(
+                self.gimbal_tilt_motor.get_angle()
+            )
+
+            self.go_to_home()
+
+            # Torque must be disabled to change modes
+            self.gimbal_pan_motor.torque_disable()
+            # Start velocity control mode for pan dynamixel
+            self.gimbal_pan_motor.set_velocity_mode()
+            self.gimbal_pan_motor.torque_enable()
+
+            # Torque must be disabled to change modes
+            self.gimbal_tilt_motor.torque_disable()
+            # Start velocity control mode for tilt dynamixel
+            self.gimbal_tilt_motor.set_velocity_mode()
+            self.gimbal_tilt_motor.torque_enable()
+
+            self.is_active = True
 
 
 def main(args=None):
     rclpy.init(args=args)
+
     gimbal_subscriber = None
 
     try:
@@ -186,6 +322,7 @@ def main(args=None):
         rclpy.spin(gimbal_subscriber)
     except KeyboardInterrupt:
         if gimbal_subscriber is not None:
+            gimbal_subscriber.deactivate()
             gimbal_subscriber.destroy_node()
 
         if rclpy.ok():

@@ -25,13 +25,6 @@ else()
     set(pip_args --user -r ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt)
 endif()
 
-execute_process(
-    COMMAND_ECHO STDOUT
-    COMMAND_ERROR_IS_FATAL ANY
-    COMMAND ${Python3_EXECUTABLE} -m pip install ${pip_args}
-)
-
-
 # Add target for libdatachannel (a lightweight and cross-platform WebRTC C++ library)
 include_directories(
     ${Python3_ROOT_DIR}/include/python3.10 ${Python3_ROOT_DIR}/include include
@@ -43,6 +36,12 @@ find_package(ament_cmake)
 find_package(rosidl_default_generators REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
+
+execute_process(
+    COMMAND_ECHO STDOUT
+    COMMAND_ERROR_IS_FATAL ANY
+    COMMAND ${Python3_EXECUTABLE} -m pip install ${pip_args}
+)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
     msg/Gimbal.msg
@@ -65,6 +64,32 @@ install(
     FILE_PERMISSIONS
     OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_WRITE OWNER_READ WORLD_READ
 )
+
+# Install udev rule
+if (NOT EXISTS /etc/udev/rules.d/89-dynamixel.rules)
+    message("\n\nPlease enter computer password: ")
+    install(
+        CODE
+        "execute_process( \
+            COMMAND_ECHO STDOUT \
+            COMMAND_ERROR_IS_FATAL ANY \
+            COMMAND sudo chmod 777 /etc/udev/rules.d \
+        )"
+    )
+    install(
+        FILES ${CMAKE_SOURCE_DIR}/89-dynamixel.rules
+        DESTINATION /etc/udev/rules.d/
+        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    )
+    install(
+        CODE
+        "execute_process( \
+            COMMAND_ECHO STDOUT \
+            COMMAND_ERROR_IS_FATAL ANY \
+            COMMAND sudo chmod 755 /etc/udev/rules.d \
+        )"
+    )
+endif()
 
 ament_export_dependencies(
     rosidl_default_runtime builtin_interfaces std_msgs

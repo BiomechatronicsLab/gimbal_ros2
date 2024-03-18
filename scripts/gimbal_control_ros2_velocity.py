@@ -12,7 +12,7 @@ import rclpy
 from rclpy.node import Node
 import rclpy.logging
 
-from configuration.configuration import Configuration
+from onr_configuration.configuration import Configuration
 from gimbal_ros2.msg import Gimbal
 from std_msgs.msg import Bool
 from serial.serialutil import SerialException

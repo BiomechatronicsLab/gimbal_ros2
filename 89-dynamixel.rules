@@ -3,4 +3,3 @@ ATTRS{idVendor}=="0403"
 ATTRS{idProduct}=="6014"
 GROUP==dialout
 MODE=="0660"
-ACTION=="add"

@@ -1,26 +1,19 @@
 #!/usr/bin/env python3
 
-from dynamixel_sdk import *  # Uses Dynamixel SDK library
-from dynamixel_sdk.port_handler import PortHandler
-from dynamixel_sdk.packet_handler import PacketHandler
-from dynamixel_sdk.robotis_def import *
-from dynamic_reconfigure.server import Server
-from hfi_robotics_ue.cfg import GimbalConfig
-import threading
+from dynio import dynamixel_controller as dxl
+import sys
+
+import rclpy
+from rclpy.node import Node
+import rclpy.logging
+
+from sensor_msgs.msg import JointState
 import numpy as np
+import time
 
-import rospy
-from std_msgs.msg import Float64MultiArray
+import threading
 
-# import own lib of helper functions (need to add its dir to path, and need to use 'relative' dir)
-import os, sys
-this_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, this_dir)
-import helper
-
-# Program mode
-MODES = ["Joint", "IK"]
-MODE = MODES[1]
+#####
 
 ADDR_TORQUE_ENABLE = 64
 ADDR_GOAL_POSITION = 116
@@ -46,40 +39,38 @@ TORQUE_DISABLE = 0  # Value for disabling the torque
 
 DXL_ID_LINK_2 = 1
 DXL_ID_LINK_1 = 0
-index = 0
 
-class GimbalDriver:
+
+
+# Set maximum Velocity
+HIGH_VEL = 1023
+LOW_VEL = int(1023/1)
+
+class GimbalDriver(Node):
     def __init__(self):
-        self.rate = rospy.Rate(30)
-        # Subscribers
-        self.gimbal_cmd_sub = rospy.Subscriber("/demo/gimbal_cmd", Float64MultiArray, self.gimbal_cmd_cb, queue_size=1)
-        self.srv = Server(GimbalConfig,self.param_callback)
-        
-        self.pan = 0
-        self.tilt = 0 
+        super().__init__("gimbal_driver")
 
-        # Initialize PortHandler instance
-        # Set the port path
-        # Get methods and members of PortHandlerLinux or PortHandlerWindows
-        self.portHandler = PortHandler(DEVICENAME)
-        # Initialize PacketHandler instance
-        # Set the protocol version
-        # Get methods and members of Protocol1PacketHandler or Protocol2PacketHandler
-        self.packetHandler = PacketHandler(PROTOCOL_VERSION)
+
+        self.portHandler = dxl.PortHandler(DEVICENAME)
+
         
         # Open port
         if self.portHandler.openPort():
-            print("Succeeded to open the port")
+            print("Succeeded to open port for Gimbal Driver")
         else:
-            print("Failed to open the port")
+            print("Failed to open the port for Gimbal Driver")
+            sys.exit()
+
         
         # Set port baudrate
         if self.portHandler.setBaudRate(BAUDRATE):
-            print("Succeeded to change the baudrate")
+            print("Succeeded to change the baudrate for Gimbal Driver")
         else:
-            print("Failed to change the baudrate")
-            print("Press any key to terminate...")
+            print("Failed to change the baudrate for Gimbal Driver")
+            sys.exit()
         
+        self.packetHandler = dxl.PacketHandler(PROTOCOL_VERSION)
+
         # Disable Dynamixel Torque
         self.packetHandler.write1ByteTxRx(
             self.portHandler, DXL_ID_LINK_1, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
@@ -95,10 +86,6 @@ class GimbalDriver:
         self.packetHandler.write1ByteTxRx(
             self.portHandler, DXL_ID_LINK_2, ADDR_CONTROL_MODE, POSITION_MODE
         )
-        
-        # Set maximum Velocity
-        HIGH_VEL = 1024
-        LOW_VEL = 50
 
         self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_1, ADDR_VELOCITY_LIMIT, HIGH_VEL)
         self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_2, ADDR_VELOCITY_LIMIT, HIGH_VEL)
@@ -114,94 +101,85 @@ class GimbalDriver:
             self.portHandler, DXL_ID_LINK_2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE
         )
 
-        self.thread = threading.Thread(target=self.loop())
-    
-    def param_callback(self, config, level):
-        self.params = config
+        self.yaw = 0
+        self.pitch = 0
+        self.POSITION = [0]*2
 
-        self.pan_scale = config['yaw_scale']
-        self.tilt_scale = config['pitch_scale']
-        self.pan_offset = np.deg2rad(config['yaw_offset'])
-        self.tilt_offset = np.deg2rad(config['pitch_offset'])
-
-        return config 
-
-    def wrap(self,angle):
-        while np.abs(angle) > np.pi:
-            if angle > np.pi:
-                angle = angle - np.pi
-    
-            if angle < -np.pi:
-                angle = angle + np.pi
-        return angle
-    
-    def update_servo(self, ID, radians):
-        # Write the angle in radians to the servo
-        POSITION = int(-1 * radians / (2 * np.pi) * 4096) + 2048
-        
-        # Write goal angle to servo
-        dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
-            self.portHandler, ID, ADDR_GOAL_POSITION, POSITION
+        self.subscription = self.create_subscription(
+            JointState, "gimbal", self.listener, 10
         )
-        if dxl_comm_result != COMM_SUCCESS:
-            print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
-        elif dxl_error != 0:
-            print("%s" % self.packetHandler.getRxPacketError(dxl_error))
+        self.subscription
+        self.time = time.time()
+        self.packet_num = 0
+
+        control_thread = threading.Thread(target=self.control_loop)
+        control_thread.start()
+
+
+    def listener(self, msg):
+        
+        if time.time() - self.time > 0.025:
+            print("Time Delay")
+            print(time.time() - self.time)
+            print(self.packet_num)
+            self.packet_num = 0
+        self.packet_num += 1
+        self.time = time.time()
+        self.yaw = msg.position[msg.name.index("yaw")]
+        self.pitch = msg.position[msg.name.index("pitch")]
+
+
+    def control_loop(self):
+
+        while True:
+
+            yaw = self.yaw % (2 * np.pi)
+            pitch = self.pitch % (2 * np.pi)
+            if yaw > np.pi:
+                yaw -= 2 * np.pi
+            if pitch > np.pi:
+                pitch -= 2 * np.pi
+            self.update_servo(DXL_ID_LINK_1,yaw)
+            self.update_servo(DXL_ID_LINK_2,pitch)
+                
+
+        
+    def update_servo(self, motorID ,angle_in_radian):
+
+        POSITION = int(-1 * angle_in_radian / (2 * np.pi) * 4096) + 2048
+        if(abs(POSITION-self.POSITION[motorID])>15):
+            dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
+                self.portHandler, motorID, ADDR_GOAL_POSITION, POSITION
+            )
+
+            self.POSITION[motorID] = POSITION
+
+            # print("Motor ID: %d, Position: %d" % (motorID, POSITION))
     
-    def gimbal_cmd_cb(self, data):
-        # Angles for pan and tilt in Radians
-        self.pan = data.data[0]
-        self.tilt = data.data[1]
-    
-    def update_gimbal(self):
-        if(self.params["override_gimbal"] == True):  
-  
-            pan_deg = self.params["gimbal_yaw"]
-            tilt_deg = self.params["gimbal_pitch"]
+    def __del__(self):
 
-            pan_rad = pan_deg*np.pi/180.0
-            tilt_rad = tilt_deg*np.pi/180.0      
+        # Disable Dynamixel Torque
+        self.packetHandler.write1ByteTxRx(
+            self.portHandler, DXL_ID_LINK_1, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
+        )
+        self.packetHandler.write1ByteTxRx(
+            self.portHandler, DXL_ID_LINK_2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
+        )
 
-            print("pan: %.3f tilt: %.3f"%(pan_rad,tilt_rad))
-            self.update_servo(DXL_ID_LINK_1, helper.clamp((pan_rad*self.pan_scale + self.pan_offset),-np.pi,np.pi))
-            self.update_servo(DXL_ID_LINK_2, helper.clamp((-tilt_rad*self.tilt_scale + self.tilt_offset),-np.pi,np.pi))
-            
-        else:
-            print("pan: %.3f tilt: %.3f"%(self.pan,self.tilt))
-            self.update_servo(DXL_ID_LINK_1, helper.clamp((self.pan*self.pan_scale + self.pan_offset),-np.pi,np.pi))
-            self.update_servo(DXL_ID_LINK_2, helper.clamp((-self.tilt*self.tilt_scale + self.tilt_offset),-np.pi,np.pi))
-            print(self.pan*self.pan_scale + self.pan_offset)
+        # Close port
+        self.portHandler.closePort()
+        print("Gimbal Driver Port Closed")
 
-    def loop(self):
-        while(not rospy.is_shutdown()):
-            self.update_gimbal()
-            self.rate.sleep()
+
+def main():
+    rclpy.init()
+    gimbal_driver = GimbalDriver()
+    rclpy.spin(gimbal_driver)
+    rclpy.shutdown()
+    gimbal_driver.portHandler.closePort()
+    print("Gimbal Driver Port Closed")
 
 if __name__ == "__main__":
-    rospy.init_node("gimbal_driver", anonymous=False)
-    rospy.loginfo("Starting gimbal driver node")
-    obj = GimbalDriver()
-    try:
-        rospy.spin()
-    except Exception as e:
-        print(str(e))
+    main()
 
-    # print("Exiting")
-    # time.sleep(0.1)
-    # stopped = False
-    # # Disable Dynamixel Torque
-    # while stopped == False:
-    #     dxl_comm_result_1, dxl_error = packetHandler.write1ByteTxRx(
-    #         portHandler, DXL_ID_LINK_1, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
-    #     )
-    #     dxl_comm_result_2, dxl_error = packetHandler.write1ByteTxRx(
-    #         portHandler, DXL_ID_LINK_2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
-    #     )
 
-    #     if (dxl_comm_result_1 and dxl_comm_result_2) == COMM_SUCCESS:
-    #         if dxl_error == 0:
-    #             stopped = True
-
-    # # Close port
-    # print("closing Port")
-    # portHandler.closePort()

@@ -56,17 +56,17 @@ class GimbalDriver(Node):
         
         # Open port
         if self.portHandler.openPort():
-            print("Succeeded to open port for Gimbal Driver")
+            self.get_logger().info("Succeeded to open port for Gimbal Driver")
         else:
-            print("Failed to open the port for Gimbal Driver")
+            self.get_logger().error("Failed to open the port for Gimbal Driver")
             sys.exit()
 
         
         # Set port baudrate
         if self.portHandler.setBaudRate(BAUDRATE):
-            print("Succeeded to change the baudrate for Gimbal Driver")
+            self.get_logger().info("Succeeded to change the baudrate for Gimbal Driver")
         else:
-            print("Failed to change the baudrate for Gimbal Driver")
+            self.get_logger().error("Failed to change the baudrate for Gimbal Driver")
             sys.exit()
         
         self.packetHandler = dxl.PacketHandler(PROTOCOL_VERSION)
@@ -109,39 +109,26 @@ class GimbalDriver(Node):
             JointState, "gimbal", self.listener, 10
         )
         self.subscription
-        self.time = time.time()
         self.packet_num = 0
-
-        control_thread = threading.Thread(target=self.control_loop)
-        control_thread.start()
 
 
     def listener(self, msg):
         
-        if time.time() - self.time > 0.025:
-            print("Time Delay")
-            print(time.time() - self.time)
-            print(self.packet_num)
-            self.packet_num = 0
         self.packet_num += 1
         self.time = time.time()
         self.yaw = msg.position[msg.name.index("yaw")]
         self.pitch = msg.position[msg.name.index("pitch")]
+        yaw = self.yaw % (2 * np.pi)
+        pitch = self.pitch % (2 * np.pi)
+        if yaw > np.pi:
+            yaw -= 2 * np.pi
+        if pitch > np.pi:
+            pitch -= 2 * np.pi
+        self.update_servo(DXL_ID_LINK_1,yaw)
+        self.update_servo(DXL_ID_LINK_2,pitch)
+        self.get_logger().info("Packet Number: %d, Time: %f, Yaw: %f, Pitch: %f \n" % (self.packet_num, self.time, yaw, pitch))
 
 
-    def control_loop(self):
-
-        while True:
-
-            yaw = self.yaw % (2 * np.pi)
-            pitch = self.pitch % (2 * np.pi)
-            if yaw > np.pi:
-                yaw -= 2 * np.pi
-            if pitch > np.pi:
-                pitch -= 2 * np.pi
-            self.update_servo(DXL_ID_LINK_1,yaw)
-            self.update_servo(DXL_ID_LINK_2,pitch)
-                
 
         
     def update_servo(self, motorID ,angle_in_radian):
@@ -153,8 +140,7 @@ class GimbalDriver(Node):
             )
 
             self.POSITION[motorID] = POSITION
-
-            # print("Motor ID: %d, Position: %d" % (motorID, POSITION))
+            self.get_logger().info("Motor ID: %d, Position: %d" % (motorID, POSITION))
     
     def __del__(self):
 

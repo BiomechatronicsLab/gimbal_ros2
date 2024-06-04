@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+"""
+Developed By: Lionel
+
+Updated to ROS2 by: S. M. Asjad
+
+"""
+
 from dynio import dynamixel_controller as dxl
 import sys
 

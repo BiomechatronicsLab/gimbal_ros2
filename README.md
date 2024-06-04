@@ -12,3 +12,7 @@ pip3 install -r requirements.txt
 ros2 run gimbal_ros2 gimbal_driver.py
 ```
 
+## To run Keyboard Teleop
+```bash
+ros2 run gimbal_ros2 teleop.py
+```

@@ -54,14 +54,6 @@ install(
 )
 
 
-# Install launch files.
-install(
-    DIRECTORY launch/
-    DESTINATION share/${PROJECT_NAME}/
-    FILE_PERMISSIONS
-    OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_WRITE OWNER_READ WORLD_READ
-)
-
 
 ament_export_dependencies(
     rosidl_default_runtime builtin_interfaces std_msgs

@@ -140,7 +140,10 @@ class GimbalDriver(Node):
         
     def update_servo(self, motorID ,angle_in_radian):
 
+        if motorID == 1:
+            angle_in_radian = angle_in_radian*2
         POSITION = int(-1 * angle_in_radian / (2 * np.pi) * 4096) + 2048
+        
         if(abs(POSITION-self.POSITION[motorID])>15):
             dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
                 self.portHandler, motorID, ADDR_GOAL_POSITION, POSITION

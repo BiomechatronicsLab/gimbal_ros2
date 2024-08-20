@@ -29,11 +29,12 @@ ADDR_VELOCITY_LIMIT = 44
 ADDR_VELOCITY_PROFILE = 112
 ADDR_PRESENT_POSITION = 132
 ADDR_PRESENT_VELOCITY = 128
+ADDR_MINIMUM_POSITION = 52
+ADDR_MAXIMUM_POSITION = 48
 
-DXL_MINIMUM_POSITION_VALUE = 0  # Refer to the Minimum Position Limit of product eManual
-DXL_MAXIMUM_POSITION_VALUE = (
-    1024  # Refer to the Maximum Position Limit of product eManual
-)
+DXL_MINIMUM_POSITION_VALUE = [900, 930]  
+DXL_MAXIMUM_POSITION_VALUE = [3200, 3000]
+
 BAUDRATE = 57600
 ADDR_CONTROL_MODE = 11
 POSITION_MODE = 3
@@ -77,6 +78,11 @@ class GimbalDriver(Node):
             sys.exit()
         
         self.packetHandler = dxl.PacketHandler(PROTOCOL_VERSION)
+
+        # Set Safety Position Limits
+        for i in range(2):
+            self.packetHandler.write4ByteTxRx(self.portHandler,i, ADDR_MINIMUM_POSITION,DXL_MINIMUM_POSITION_VALUE[i])
+            self.packetHandler.write4ByteTxRx(self.portHandler,i, ADDR_MAXIMUM_POSITION,DXL_MAXIMUM_POSITION_VALUE[i])
 
         # Disable Dynamixel Torque
         self.packetHandler.write1ByteTxRx(

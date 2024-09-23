@@ -43,10 +43,7 @@ execute_process(
     COMMAND ${Python3_EXECUTABLE} -m pip install ${pip_args}
 )
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-    msg/Gimbal.msg
-    DEPENDENCIES builtin_interfaces std_msgs
-)
+
 
 # Install Python executables
 install(
@@ -57,39 +54,6 @@ install(
 )
 
 
-# Install launch files.
-install(
-    DIRECTORY launch/
-    DESTINATION share/${PROJECT_NAME}/
-    FILE_PERMISSIONS
-    OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_WRITE OWNER_READ WORLD_READ
-)
-
-# Install udev rule
-if (NOT EXISTS /etc/udev/rules.d/89-dynamixel.rules)
-    message("\n\nPlease enter computer password: ")
-    install(
-        CODE
-        "execute_process( \
-            COMMAND_ECHO STDOUT \
-            COMMAND_ERROR_IS_FATAL ANY \
-            COMMAND sudo chmod 777 /etc/udev/rules.d \
-        )"
-    )
-    install(
-        FILES ${CMAKE_SOURCE_DIR}/89-dynamixel.rules
-        DESTINATION /etc/udev/rules.d/
-        PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    )
-    install(
-        CODE
-        "execute_process( \
-            COMMAND_ECHO STDOUT \
-            COMMAND_ERROR_IS_FATAL ANY \
-            COMMAND sudo chmod 755 /etc/udev/rules.d \
-        )"
-    )
-endif()
 
 ament_export_dependencies(
     rosidl_default_runtime builtin_interfaces std_msgs

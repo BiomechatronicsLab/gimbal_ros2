@@ -6,10 +6,10 @@ Developed By: Lionel
 Updated to ROS2 by: S. M. Asjad
 
 """
-
 from dynio import dynamixel_controller as dxl
 import sys
 
+from dynamixel_sdk import COMM_SUCCESS
 import rclpy
 from rclpy.node import Node
 import rclpy.logging
@@ -17,8 +17,6 @@ import rclpy.logging
 from sensor_msgs.msg import JointState
 import numpy as np
 import time
-
-import threading
 
 #####
 
@@ -31,23 +29,18 @@ ADDR_PRESENT_POSITION = 132
 ADDR_PRESENT_VELOCITY = 128
 ADDR_MINIMUM_POSITION = 52
 ADDR_MAXIMUM_POSITION = 48
+ADDR_PRESENT_POSITION = 132
 
-DXL_MINIMUM_POSITION_VALUE = [900, 930]  
-DXL_MAXIMUM_POSITION_VALUE = [3200, 3000]
-
-BAUDRATE = 57600
 ADDR_CONTROL_MODE = 11
 POSITION_MODE = 3
-VELOCITY_MODE = 1
 
 PROTOCOL_VERSION = 2.0
-DEVICENAME = "/dev/u2d2"
+DEVICENAME = "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT6Z5UZP-if00-port0"
 TORQUE_ENABLE = 1  # Value for enabling the torque
 TORQUE_DISABLE = 0  # Value for disabling the torque
 
-DXL_ID_LINK_2 = 1
-DXL_ID_LINK_1 = 0
-
+DXL_ID_LINK_1 = 0 # PAN
+DXL_ID_LINK_2 = 1 # TILT
 
 
 # Set maximum Velocity
@@ -58,31 +51,37 @@ class GimbalDriver(Node):
     def __init__(self):
         super().__init__("gimbal_driver")
 
+        # Declare parameters with default values
+        self.declare_parameter('baudrate', 57600)
+        self.declare_parameter('device_name', '/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT6Z5UZP-if00-port0')
+        self.declare_parameter('start_pos', [0.0, 0.0])
+        self.declare_parameter('min_position_deg', [-100.0, -100.0])
+        self.declare_parameter('max_position_deg', [100.0, 100.0])
 
-        self.portHandler = dxl.PortHandler(DEVICENAME)
+        # Get parameters from the parameter sever
+        self.baudrate = self.get_parameter('baudrate').get_parameter_value().integer_value
+        self.device_name = self.get_parameter('device_name').get_parameter_value().string_value
+        self.start_pos = self.get_parameter('start_pos').get_parameter_value().double_array_value
+        self.min_position_deg = self.get_parameter('min_position_deg').get_parameter_value().double_array_value
+        self.max_position_deg = self.get_parameter('max_position_deg').get_parameter_value().double_array_value
 
-        
-        # Open port
+        # Intialize PortHandler and PackerHandler instances
+        self.portHandler = dxl.PortHandler(self.device_name)
+        self.packetHandler = dxl.PacketHandler(PROTOCOL_VERSION)
+
+         # Open port
         if self.portHandler.openPort():
             self.get_logger().info("Succeeded to open port for Gimbal Driver")
         else:
             self.get_logger().error("Failed to open the port for Gimbal Driver")
             sys.exit()
 
-        
         # Set port baudrate
-        if self.portHandler.setBaudRate(BAUDRATE):
+        if self.portHandler.setBaudRate(self.baudrate):
             self.get_logger().info("Succeeded to change the baudrate for Gimbal Driver")
         else:
             self.get_logger().error("Failed to change the baudrate for Gimbal Driver")
             sys.exit()
-        
-        self.packetHandler = dxl.PacketHandler(PROTOCOL_VERSION)
-
-        # Set Safety Position Limits
-        for i in range(2):
-            self.packetHandler.write4ByteTxRx(self.portHandler,i, ADDR_MINIMUM_POSITION,DXL_MINIMUM_POSITION_VALUE[i])
-            self.packetHandler.write4ByteTxRx(self.portHandler,i, ADDR_MAXIMUM_POSITION,DXL_MAXIMUM_POSITION_VALUE[i])
 
         # Disable Dynamixel Torque
         self.packetHandler.write1ByteTxRx(
@@ -100,11 +99,18 @@ class GimbalDriver(Node):
             self.portHandler, DXL_ID_LINK_2, ADDR_CONTROL_MODE, POSITION_MODE
         )
 
+        # Set Safety Position Limits for Min / Max
+        for i in range(2):
+            self.packetHandler.write4ByteTxRx(self.portHandler, i, ADDR_MINIMUM_POSITION, self.degrees_to_ticks(self.min_position_deg[i]))
+            self.packetHandler.write4ByteTxRx(self.portHandler, i, ADDR_MAXIMUM_POSITION, self.degrees_to_ticks(self.max_position_deg[i]))
+
+        # Register 44
         self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_1, ADDR_VELOCITY_LIMIT, HIGH_VEL)
         self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_2, ADDR_VELOCITY_LIMIT, HIGH_VEL)
 
-        self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_1, ADDR_VELOCITY_PROFILE, LOW_VEL)
-        self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_2, ADDR_VELOCITY_PROFILE, LOW_VEL)
+        # # Register 112
+        # self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_1, ADDR_VELOCITY_PROFILE, LOW_VEL)
+        # self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_2, ADDR_VELOCITY_PROFILE, LOW_VEL)
         
         # Enable Dynamixel Torque
         self.packetHandler.write1ByteTxRx(
@@ -114,23 +120,29 @@ class GimbalDriver(Node):
             self.portHandler, DXL_ID_LINK_2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE
         )
 
-        self.yaw = 0
-        self.pitch = 0
-        self.POSITION = [0]*2
+        self.position = [0, 0]
 
-        self.subscription = self.create_subscription(
+        # Get the current position of the gimbal (prior to starting)
+        for i in range(2):
+            self.position[i] = self.ticks_to_degrees(self.packetHandler.read4ByteTxRx(self.portHandler, i, ADDR_PRESENT_POSITION)[0])
+
+        # Set Start Position 
+        self.update_servo(DXL_ID_LINK_1, self.start_pos[0])
+        self.update_servo(DXL_ID_LINK_2, self.start_pos[1])
+
+        self.sub_gimbal_joint = self.create_subscription(
             JointState, "gimbal", self.listener, 10
         )
-        self.subscription
         self.packet_num = 0
 
 
     def listener(self, msg):
-        
         self.packet_num += 1
         self.time = time.time()
         self.yaw = msg.position[msg.name.index("yaw")]
         self.pitch = msg.position[msg.name.index("pitch")]
+
+        # Recieve Messages in form of Radians, perform math to have them between -180 to 180 deg
         yaw = self.yaw % (2 * np.pi)
         pitch = self.pitch % (2 * np.pi)
         if yaw > np.pi:
@@ -142,21 +154,53 @@ class GimbalDriver(Node):
         self.get_logger().info("Packet Number: %d, Time: %f, Yaw: %f, Pitch: %f \n" % (self.packet_num, self.time, yaw, pitch))
 
 
+    def ticks_to_degrees(self, ticks):
+        return (ticks - 2048) * 0.088
+
+    def degrees_to_ticks(self, degrees):
+        return int(degrees / 0.088) + 2048
 
         
-    def update_servo(self, motorID ,angle_in_radian):
+    def update_servo(self, motorID, angle_in_radian):
 
-        if motorID == 1:
-            angle_in_radian = angle_in_radian*2
-        POSITION = int(-1 * angle_in_radian / (2 * np.pi) * 4096) + 2048
+        angle_in_deg = angle_in_radian * 180 / np.pi
+        servo_pos_tick = self.degrees_to_ticks(angle_in_deg)
+        print("Requested Angle: " + str(angle_in_deg))
+        print("Current Position: " + str(self.position[motorID]))
         
-        if(abs(POSITION-self.POSITION[motorID])>15):
-            dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
-                self.portHandler, motorID, ADDR_GOAL_POSITION, POSITION
-            )
+        dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
+            self.portHandler, motorID, ADDR_GOAL_POSITION, -1 * servo_pos_tick
+        )
 
-            self.POSITION[motorID] = POSITION
-            self.get_logger().info("Motor ID: %d, Position: %d" % (motorID, POSITION))
+        # # Only move if greater than 0.1 of a degree...
+        # if(abs(angle_in_deg - self.position[motorID]) > 0.1):
+        #     position_reached = False
+
+        #     # while not position_reached:
+        #     #     # Read the present position
+
+        #         dxl_present_position, dxl_comm_result, dxl_error = self.packetHandler.read4ByteTxRx(
+        #             self.portHandler, motorID, ADDR_PRESENT_POSITION
+        #         )
+
+        #         if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
+        #             self.get_logger().error("Failed to read position")
+
+        #         # Convert present position (ticks) to degrees
+        #         current_position_deg = self.ticks_to_degrees(dxl_present_position)
+        #         print(current_position_deg)
+
+        #         # Check if the motor is close to the target (within a tolerance, e.g., 0.5 degrees)
+        #         if abs(current_position_deg - angle_in_deg) < 1.0:
+        #             self.get_logger().info("Motor ID: %d reached the target position: %f degrees" % (motorID, current_position_deg))
+        #             position_reached = True
+        #             self.position[motorID] = current_position_deg
+
+        #         # Optionally, add a small sleep to avoid busy looping
+        #         time.sleep(0.1)
+
+        self.position[motorID] = angle_in_deg
+        self.get_logger().info("Motor ID: %d, Position (DEG): %d" % (motorID, angle_in_deg))
     
     def __del__(self):
 

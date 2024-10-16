@@ -5,6 +5,7 @@ Developed By: Lionel
 
 Updated to ROS2 by: S. M. Asjad
 
+Update by S.Mock 10/16/24
 """
 from dynio import dynamixel_controller as dxl
 import sys
@@ -161,6 +162,7 @@ class GimbalDriver(Node):
         
     def update_servo(self, motorID, angle_in_radian):
 
+        # Have to multiple by * -1 because reverse of gimbal movement to head tracking
         angle_in_deg = -1 * angle_in_radian * 180 / np.pi
         servo_pos_tick = self.degrees_to_ticks(angle_in_deg)
         print("Requested Angle: " + str(angle_in_deg))
@@ -169,33 +171,6 @@ class GimbalDriver(Node):
         dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
             self.portHandler, motorID, ADDR_GOAL_POSITION, servo_pos_tick
         )
-
-        # # Only move if greater than 0.1 of a degree...
-        # if(abs(angle_in_deg - self.position[motorID]) > 0.1):
-        #     position_reached = False
-
-        #     # while not position_reached:
-        #     #     # Read the present position
-
-        #         dxl_present_position, dxl_comm_result, dxl_error = self.packetHandler.read4ByteTxRx(
-        #             self.portHandler, motorID, ADDR_PRESENT_POSITION
-        #         )
-
-        #         if dxl_comm_result != COMM_SUCCESS or dxl_error != 0:
-        #             self.get_logger().error("Failed to read position")
-
-        #         # Convert present position (ticks) to degrees
-        #         current_position_deg = self.ticks_to_degrees(dxl_present_position)
-        #         print(current_position_deg)
-
-        #         # Check if the motor is close to the target (within a tolerance, e.g., 0.5 degrees)
-        #         if abs(current_position_deg - angle_in_deg) < 1.0:
-        #             self.get_logger().info("Motor ID: %d reached the target position: %f degrees" % (motorID, current_position_deg))
-        #             position_reached = True
-        #             self.position[motorID] = current_position_deg
-
-        #         # Optionally, add a small sleep to avoid busy looping
-        #         time.sleep(0.1)
 
         self.position[motorID] = angle_in_deg
         self.get_logger().info("Motor ID: %d, Position (DEG): %d" % (motorID, angle_in_deg))

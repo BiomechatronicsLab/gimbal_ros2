@@ -30,12 +30,10 @@ ADDR_PRESENT_VELOCITY = 128
 ADDR_MINIMUM_POSITION = 52
 ADDR_MAXIMUM_POSITION = 48
 ADDR_PRESENT_POSITION = 132
-
 ADDR_CONTROL_MODE = 11
 POSITION_MODE = 3
 
 PROTOCOL_VERSION = 2.0
-DEVICENAME = "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT6Z5UZP-if00-port0"
 TORQUE_ENABLE = 1  # Value for enabling the torque
 TORQUE_DISABLE = 0  # Value for disabling the torque
 
@@ -163,13 +161,13 @@ class GimbalDriver(Node):
         
     def update_servo(self, motorID, angle_in_radian):
 
-        angle_in_deg = angle_in_radian * 180 / np.pi
+        angle_in_deg = -1 * angle_in_radian * 180 / np.pi
         servo_pos_tick = self.degrees_to_ticks(angle_in_deg)
         print("Requested Angle: " + str(angle_in_deg))
         print("Current Position: " + str(self.position[motorID]))
         
         dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
-            self.portHandler, motorID, ADDR_GOAL_POSITION, -1 * servo_pos_tick
+            self.portHandler, motorID, ADDR_GOAL_POSITION, servo_pos_tick
         )
 
         # # Only move if greater than 0.1 of a degree...

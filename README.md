@@ -1,13 +1,13 @@
 # **ROS2-based Camera Gimbal Control**
 
-# ROBOTIQ ROS2 Interface
-- This repo contains code relevant to running the Biomechatronics Lab Gimbal for Camera Tracking.
+# Gimbal ROS2 Interface
+- This repo contains code relevant to running the Biomechatronics Lab 2DOF Gimbal for Camera Tracking.
 
 ## Table of Contents
 
 - [Dependencies](#dependencies)
 - [Setup Instructions](#setup-instructions)
-- [Running the ROBOTIQ Hand](#running-the-leap-hand)
+- [Running the Gimbal](#running-the-gimbal)
 - [Debugging](#debugging)
 
 ## Dependencies
@@ -20,7 +20,7 @@ The table below lists the direct dependencies needed for this repository.
 ## Setup Instructions
 
 ### Software Setup
-Follow these steps to set up the Robotiq Hand:
+Follow these steps to set up 2DOF Gimbal:
 
 1. **Clone the Repository**:
    ```bash

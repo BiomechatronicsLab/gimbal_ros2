@@ -7,7 +7,8 @@ Updated to ROS2 by: S. M. Asjad
 
 Update by S.Mock 10/16/24
 """
-from dynio import dynamixel_controller as dxl
+
+import dynamixel_sdk as dxl
 import sys
 
 from dynamixel_sdk import COMM_SUCCESS
@@ -148,8 +149,8 @@ class GimbalDriver(Node):
             yaw -= 2 * np.pi
         if pitch > np.pi:
             pitch -= 2 * np.pi
-        self.update_servo(DXL_ID_LINK_1,yaw)
-        self.update_servo(DXL_ID_LINK_2,pitch)
+        self.update_servo(DXL_ID_LINK_1, yaw)
+        self.update_servo(DXL_ID_LINK_2, pitch)
         self.get_logger().info("Packet Number: %d, Time: %f, Yaw: %f, Pitch: %f \n" % (self.packet_num, self.time, yaw, pitch))
 
 
@@ -165,8 +166,8 @@ class GimbalDriver(Node):
         # Have to multiple by * -1 because reverse of gimbal movement to head tracking
         angle_in_deg = -1 * angle_in_radian * 180 / np.pi
         servo_pos_tick = self.degrees_to_ticks(angle_in_deg)
-        print("Requested Angle: " + str(angle_in_deg))
-        print("Current Position: " + str(self.position[motorID]))
+        # print("Requested Angle: " + str(angle_in_deg))
+        # print("Current Position: " + str(self.position[motorID]))
         
         dxl_comm_result, dxl_error = self.packetHandler.write4ByteTxRx(
             self.portHandler, motorID, ADDR_GOAL_POSITION, servo_pos_tick

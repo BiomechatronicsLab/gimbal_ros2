@@ -16,7 +16,7 @@ class TeleopNode(Node):
         self.pitch = 0
         self.yaw = 0    
         self.logger = self.get_logger()
-        self.angle_increment = 0.087  # Adjust this value as needed
+        self.angle_increment = 2.5 # Adjust this value as needed
 
     def publish_yaw_pitch(self):
         msg = JointState()

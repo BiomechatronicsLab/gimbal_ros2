@@ -60,3 +60,8 @@ Follow these steps to set up 2DOF Gimbal:
    ```bash
    ros2 run gimbal_ros2 demo_gimbal_motion.py 
    ```
+
+
+## Debugging
+
+1. If no motors show up, check that your serial port permissions are correct. Try this command: `sudo usermod -aG dialout $USER` and reboot the computer

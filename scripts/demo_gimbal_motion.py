@@ -4,21 +4,24 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 import time
+import numpy as np
 
 class DemoGimbalMotion(Node):
     def __init__(self):
         super().__init__('demo_gimbal_node')
 
+
+        rad_90deg = np.pi / 2
         # Define positions to command
         self.positions_to_command = [
             [0.0, 0.0],
-            [180.0, 0.0],
+            [rad_90deg, 0.0], # right
             [0.0, 0.0],
-            [-180.0, 0.0],
+            [-rad_90deg, 0.0], # left
             [0.0, 0.0],
-            [0.0, 180.0],
+            [0.0, rad_90deg], # up
             [0.0, 0.0],
-            [0.0, -180.0],
+            [0.0, -rad_90deg], # down
         ]
         
         # Initialize index for current position

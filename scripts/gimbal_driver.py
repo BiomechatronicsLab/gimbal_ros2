@@ -34,6 +34,9 @@ ADDR_MAXIMUM_POSITION = 48
 ADDR_PRESENT_POSITION = 132
 ADDR_CONTROL_MODE = 11
 POSITION_MODE = 3
+ADDR_P_GAIN = 84
+ADDR_I_GAIN = 82
+ADDR_D_GAIN = 80
 
 PROTOCOL_VERSION = 2.0
 TORQUE_ENABLE = 1  # Value for enabling the torque
@@ -57,6 +60,9 @@ class GimbalDriver(Node):
         self.declare_parameter('start_pos', [0.0, 0.0])
         self.declare_parameter('min_position_deg', [-100.0, -100.0])
         self.declare_parameter('max_position_deg', [100.0, 100.0])
+        self.declare_parameter('kP', 500)
+        self.declare_parameter('kI', 0)
+        self.declare_parameter('kD', 200)
 
         # Get parameters from the parameter sever
         self.baudrate = self.get_parameter('baudrate').get_parameter_value().integer_value
@@ -64,6 +70,9 @@ class GimbalDriver(Node):
         self.start_pos = self.get_parameter('start_pos').get_parameter_value().double_array_value
         self.min_position_deg = self.get_parameter('min_position_deg').get_parameter_value().double_array_value
         self.max_position_deg = self.get_parameter('max_position_deg').get_parameter_value().double_array_value
+        self.kP = self.get_parameter('kP').get_parameter_value().integer_value
+        self.kI = self.get_parameter('kI').get_parameter_value().integer_value
+        self.kD = self.get_parameter('kD').get_parameter_value().integer_value
 
         # Intialize PortHandler and PackerHandler instances
         self.portHandler = dxl.PortHandler(self.device_name)
@@ -90,7 +99,7 @@ class GimbalDriver(Node):
         self.packetHandler.write1ByteTxRx(
             self.portHandler, DXL_ID_LINK_2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE
         )
-        
+
         # Place Dynamixel in position control mode
         self.packetHandler.write1ByteTxRx(
             self.portHandler, DXL_ID_LINK_1, ADDR_CONTROL_MODE, POSITION_MODE
@@ -99,10 +108,13 @@ class GimbalDriver(Node):
             self.portHandler, DXL_ID_LINK_2, ADDR_CONTROL_MODE, POSITION_MODE
         )
 
-        # Set Safety Position Limits for Min / Max
+        # Set Safety Position Limits for Min / Max, PID Gains
         for i in range(2):
             self.packetHandler.write4ByteTxRx(self.portHandler, i, ADDR_MINIMUM_POSITION, self.degrees_to_ticks(self.min_position_deg[i]))
             self.packetHandler.write4ByteTxRx(self.portHandler, i, ADDR_MAXIMUM_POSITION, self.degrees_to_ticks(self.max_position_deg[i]))
+            self.packetHandler.write2ByteTxRx(self.portHandler, i, ADDR_P_GAIN, self.kP)
+            self.packetHandler.write2ByteTxRx(self.portHandler, i, ADDR_I_GAIN, self.kI)
+            self.packetHandler.write2ByteTxRx(self.portHandler, i, ADDR_D_GAIN, self.kD)
 
         # Register 44
         self.packetHandler.write4ByteTxRx(self.portHandler, DXL_ID_LINK_1, ADDR_VELOCITY_LIMIT, HIGH_VEL)

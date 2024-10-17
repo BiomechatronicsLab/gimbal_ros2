@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(gimbal_ros2)
 
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -O3 -std=c++17")
@@ -31,19 +30,18 @@ include_directories(
 )
 link_directories(${Python3_ROOT_DIR}/lib ${Python3_ROOT_DIR}/lib/python3.10)
 
-
-find_package(ament_cmake)
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(rclpy REQUIRED)
 
 execute_process(
     COMMAND_ECHO STDOUT
     COMMAND_ERROR_IS_FATAL ANY
     COMMAND ${Python3_EXECUTABLE} -m pip install ${pip_args}
 )
-
-
 
 # Install Python executables
 install(
@@ -53,7 +51,16 @@ install(
     OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_WRITE OWNER_READ WORLD_READ
 )
 
+# Install launch files.
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
 
 ament_export_dependencies(
     rosidl_default_runtime builtin_interfaces std_msgs

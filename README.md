@@ -65,3 +65,4 @@ Follow these steps to set up 2DOF Gimbal:
 ## Debugging
 
 1. If no motors show up, check that your serial port permissions are correct. Try this command: `sudo usermod -aG dialout $USER` and reboot the computer
+2. If necessary, update usb timing, seen in section 6.8.1.2 of [Dynamixel Wizard manual](https://emanual.robotis.com/docs/en/software/dynamixel/dynamixel_wizard2/)
